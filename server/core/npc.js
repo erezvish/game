@@ -1,10 +1,8 @@
+import Socket from '@server/socket';
 import UI from 'shared/ui';
-
-const emoji = require('node-emoji');
-const Socket = require('./../socket');
-const world = require('./world');
-const npcs = require('./data/npcs');
-
+import emoji from 'node-emoji';
+import npcs from './data/npcs';
+import world from './world';
 
 class NPC {
   constructor(data) {
@@ -83,27 +81,27 @@ class NPC {
           const canWalkThrough = walkable.background && walkable.foreground;
 
           switch (going) {
-            default:
-            case 'up':
-              if ((npc.y - 1) >= (npc.spawn.y - npc.range) && canWalkThrough) {
-                npc.y -= 1;
-              }
-              break;
-            case 'down':
-              if ((npc.y + 1) <= (npc.spawn.y + npc.range) && canWalkThrough) {
-                npc.y += 1;
-              }
-              break;
-            case 'left':
-              if ((npc.x - 1) >= (npc.spawn.x - npc.range) && canWalkThrough) {
-                npc.x -= 1;
-              }
-              break;
-            case 'right':
-              if ((npc.x + 1) <= (npc.spawn.x + npc.range) && canWalkThrough) {
-                npc.x += 1;
-              }
-              break;
+          default:
+          case 'up':
+            if ((npc.y - 1) >= (npc.spawn.y - npc.range) && canWalkThrough) {
+              npc.y -= 1;
+            }
+            break;
+          case 'down':
+            if ((npc.y + 1) <= (npc.spawn.y + npc.range) && canWalkThrough) {
+              npc.y += 1;
+            }
+            break;
+          case 'left':
+            if ((npc.x - 1) >= (npc.spawn.x - npc.range) && canWalkThrough) {
+              npc.x -= 1;
+            }
+            break;
+          case 'right':
+            if ((npc.x + 1) <= (npc.spawn.x + npc.range) && canWalkThrough) {
+              npc.x += 1;
+            }
+            break;
           }
         }
 

@@ -249,15 +249,15 @@ export default {
       }
 
       switch (getItem.graphics.tileset) {
-        case 'general':
-          return this.images.generalImage.src;
-        case 'jewelry':
-          return this.images.jewelryImage.src;
-        case 'armor':
-          return this.images.armorImage.src;
-        default:
-        case 'weapons':
-          return this.images.weaponsImage.src;
+      case 'general':
+        return this.images.generalImage.src;
+      case 'jewelry':
+        return this.images.jewelryImage.src;
+      case 'armor':
+        return this.images.armorImage.src;
+      default:
+      case 'weapons':
+        return this.images.weaponsImage.src;
       }
     },
   },
@@ -272,7 +272,7 @@ $default_color: #383838;
 div.grid_container {
   display: grid;
   height: 275px;
-  overflow-y: scroll;
+  overflow-y: auto;
   box-sizing: border-box;
   font-family: "GameFont", serif;
   grid-template-rows: repeat(6, 35px);

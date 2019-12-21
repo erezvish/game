@@ -1,4 +1,4 @@
-import { presetActions } from '../helpers/database';
+import { presetActions } from '@server/core/data/helpers/database';
 
 export default [
   // Amulets
@@ -158,4 +158,3 @@ export default [
     actions: presetActions(['wearable']),
   },
 ];
-

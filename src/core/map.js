@@ -1,9 +1,9 @@
-import config from 'root/config';
 import PF from 'pathfinding';
-import moveToMouse from '@/assets/graphics/ui/mouse/moveTo.png';
-import blockedMouse from '@/assets/graphics/ui/mouse/blocked.png';
 import UI from 'shared/ui';
+import config from 'root/config';
+import blockedMouse from '@/assets/graphics/ui/mouse/blocked.png';
 import bus from './utilities/bus';
+import moveToMouse from '@/assets/graphics/ui/mouse/moveTo.png';
 
 class Map {
   constructor(data, images) {
@@ -257,15 +257,15 @@ class Map {
       // Get the correct tileset to draw upon
       const itemTileset = () => {
         switch (info.graphics.tileset) {
-          case 'general':
-            return this.images.generalImage;
-          case 'jewelry':
-            return this.images.jewelryImage;
-          case 'armor':
-            return this.images.armorImage;
-          default:
-          case 'weapons':
-            return this.images.weaponsImage;
+        case 'general':
+          return this.images.generalImage;
+        case 'jewelry':
+          return this.images.jewelryImage;
+        case 'armor':
+          return this.images.armorImage;
+        default:
+        case 'weapons':
+          return this.images.weaponsImage;
         }
       };
 

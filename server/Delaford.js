@@ -1,22 +1,14 @@
-// Main modules
-import Socket from './socket';
-import Handler from './player/handler';
+import { general, wearableItems } from '@server/core/data/items';
 
-const { wearableItems, general } = require('./core/data/items');
-
-const world = require('./core/world');
-
-// Node modules
-const uuid = require('uuid/v4');
-const emoji = require('node-emoji');
-
-// Default entities
-const NPC = require('./core/npc');
-const Map = require('./core/map');
-const Item = require('./core/item');
-
-// Tools and utility
-const Authentication = require('./player/authentication');
+import Authentication from '@server/player/authentication';
+import Handler from '@server/player/handler';
+import Item from '@server/core/item';
+import Map from '@server/core/map';
+import NPC from '@server/core/npc';
+import Socket from '@server/socket';
+import emoji from 'node-emoji';
+import uuid from 'uuid/v4';
+import world from '@server/core/world';
 
 class Delaford {
   constructor(server) {

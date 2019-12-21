@@ -1,17 +1,16 @@
+import Socket from '@server/socket';
 import UI from 'shared/ui';
+import { wearableItems } from '@server/core/data/items';
+import world from '@server/core/world';
 
-const world = require('../../core/world');
-const Socket = require('../../socket');
-const { wearableItems } = require('./../../core/data/items');
-
-module.exports = {
+export default {
   /**
    * Equip an an item to the player
    *
    * @param {object} data Item you are equipping
    */
   equippedAnItem(data) {
-    const equippingItem = data.player.inventory.find(s => s.slot === data.item.miscData.slot);
+    const equippingItem = data.player.inventory.slots.find(s => s.slot === data.item.miscData.slot);
     const playerIndex = world.players.findIndex(p => p.uuid === data.id);
     const getItem = wearableItems.find(i => i.id === data.item.id);
 
@@ -24,8 +23,8 @@ module.exports = {
 
     world.players[playerIndex].wear[getItem.slot] = item;
     // eslint-disable-next-line
-    const getRealPlacement = world.players[playerIndex].inventory.findIndex(i => item.uuid === i.uuid);
-    world.players[playerIndex].inventory.splice(getRealPlacement, 1);
+    const getRealPlacement = world.players[playerIndex].inventory.slots.findIndex(i => item.uuid === i.uuid);
+    world.players[playerIndex].inventory.slots.splice(getRealPlacement, 1);
 
     Socket.broadcast('player:equippedAnItem', world.players[playerIndex]);
   },
@@ -41,7 +40,7 @@ module.exports = {
       const getItem = wearableItems.find(i => i.id === data.item.id);
 
       const item = {
-        slot: UI.getOpenSlot(world.players[playerIndex].inventory),
+        slot: UI.getOpenSlot(world.players[playerIndex].inventory.slots),
         id: getItem.id,
         graphics: getItem.graphics,
         uuid: world.players[playerIndex].wear[getItem.slot].uuid,
@@ -54,8 +53,13 @@ module.exports = {
         item.slot = data.item.slot;
       }
 
+      world.players[playerIndex].inventory.add(
+        getItem.id,
+        1,
+        world.players[playerIndex].wear[getItem.slot].uuid,
+      );
+
       world.players[playerIndex].wear[getItem.slot] = null;
-      world.players[playerIndex].inventory.push(item);
 
       Socket.broadcast('player:unequippedAnItem', world.players[playerIndex]);
       resolve(200);

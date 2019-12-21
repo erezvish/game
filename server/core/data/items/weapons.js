@@ -1,4 +1,4 @@
-import { presetActions } from '../helpers/database';
+import { presetActions } from '@server/core/data/helpers/database';
 
 export default [
   // Bronze weaponry
@@ -1083,4 +1083,3 @@ export default [
     twoHanded: true,
   },
 ];
-

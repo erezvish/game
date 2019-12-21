@@ -1,4 +1,4 @@
-import { presetActions } from '../helpers/database';
+import { presetActions } from '@server/core/data/helpers/database';
 
 export default [
   // Coins
@@ -18,7 +18,7 @@ export default [
     actions: presetActions([
       'resource',
     ]),
-    untradeable: false,
+    prohibited: true,
   },
   // Ores
   {

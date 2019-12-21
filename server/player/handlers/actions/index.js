@@ -3,20 +3,21 @@
  * for example: (take, drop, pickup, etc.)
  */
 
+import { Bank, Shop } from '@server/core/functions';
+import { general, wearableItems } from '@server/core/data/items';
+
+import Action from '@server/player/action';
+import ContextMenu from '@server/core/context-menu';
+import Handler from '@server/player/handler';
+import Item from '@server/core/item';
+import Map from '@server/core/map';
+import Mining from '@server/core/skills/mining';
+import Query from '@server/core/data/query';
+import Socket from '@server/socket';
 import UI from 'shared/ui';
+import pipe from '@server/player/pipeline';
 import uuid from 'uuid/v4';
-import pipe from '../../pipeline';
-import Action from '../../action';
-import Map from '../../../core/map';
-import Socket from '../../../socket';
-import Item from '../../../core/item';
-import world from '../../../core/world';
-import Query from '../../../core/data/query';
-import Handler from '../../../player/handler';
-import { Bank, Shop } from '../../../core/functions';
-import Mining from '../../../core/skills/mining';
-import ContextMenu from '../../../core/context-menu';
-import { wearableItems, general } from '../../../core/data/items';
+import world from '@server/core/world';
 
 export default {
   'player:walk-here': (data) => {
@@ -59,10 +60,12 @@ export default {
     });
   },
   'player:inventory-drop': (data) => {
-    const itemUuid = data.player.inventory.find(s => s.slot === data.data.miscData.slot).uuid;
+    const itemInventory = data.player.inventory.slots.find(s => s.slot === data.data.miscData.slot);
+
+    const itemUuid = itemInventory.uuid;
 
     const playerIndex = world.players.findIndex(p => p.uuid === data.id);
-    world.players[playerIndex].inventory = world.players[playerIndex].inventory
+    world.players[playerIndex].inventory.slots = world.players[playerIndex].inventory.slots
       .filter(v => v.slot !== data.data.miscData.slot);
     Socket.broadcast('player:movement', world.players[playerIndex]);
 
@@ -71,12 +74,13 @@ export default {
     world.items.push({
       id: data.item.id,
       uuid: itemUuid,
+      qty: itemInventory.qty || null,
       x: world.players[playerIndex].x,
       y: world.players[playerIndex].y,
       timestamp: Date.now(),
     });
 
-    console.log(`Dropping: ${data.item.id} at ${world.players[playerIndex].x}, ${world.players[playerIndex].x}`);
+    console.log(`Dropping: ${data.item.id} (${itemInventory.qty || 0}) at ${world.players[playerIndex].x}, ${world.players[playerIndex].x}`);
 
     Socket.broadcast('world:itemDropped', world.items);
   },
@@ -179,37 +183,39 @@ export default {
 
   'player:take': (data) => {
     const { playerIndex, todo } = data;
-    // eslint-disable-next-line
-    const itemToTake = world.items.findIndex(e => (e.x === todo.at.x) && (e.y === todo.at.y) && (e.uuid === todo.item.uuid));
-
-    world.items.splice(itemToTake, 1);
-
-    Socket.broadcast('item:change', world.items);
-
-    console.log(`Picking up: ${todo.item.id} (${todo.item.uuid.substr(0, 5)}...)`);
     const { id } = Query.getItemData(todo.item.id);
+    const itemToTake = world.items.findIndex(e => (e.x === todo.at.x)
+      && (e.y === todo.at.y) && (e.uuid === todo.item.uuid));
+    const worldItem = world.items[itemToTake];
+    if (worldItem) {
+      // If qty not specified, we are picking up 1 item.
+      const quantity = worldItem.qty || 1;
+      world.items.splice(itemToTake, 1);
 
-    world.players[playerIndex].inventory.push({
-      slot: UI.getOpenSlot(world.players[playerIndex].inventory),
-      uuid: todo.item.uuid,
-      id,
-    });
+      Socket.broadcast('item:change', world.items);
 
-    // Add respawn timer on item (if is a respawn)
-    // eslint-disable-next-line
-    const resetItemIndex = world.respawns.items.findIndex(i => i.respawn && i.x === todo.at.x && i.y === todo.at.y);
-    if (resetItemIndex !== -1) {
-      world.respawns.items[resetItemIndex].pickedUp = true;
+      console.log(`Picking up: ${todo.item.id} (${todo.item.uuid.substr(0, 5)}...)`);
 
-      // eslint-disable-next-line
-      world.respawns.items[resetItemIndex].willRespawnIn = Item.calculateRespawnTime(world.respawns.items[resetItemIndex].respawnIn);
+      world.players[playerIndex].inventory.add(id, quantity, todo.item.uuid);
+
+      // Add respawn timer on item (if is a respawn)
+      const resetItemIndex = world.respawns.items.findIndex(i => (
+        i.respawn && i.x === todo.at.x && i.y === todo.at.y
+      ));
+
+      if (resetItemIndex !== -1) {
+        world.respawns.items[resetItemIndex].pickedUp = true;
+        world.respawns.items[resetItemIndex].willRespawnIn = Item.calculateRespawnTime(
+          world.respawns.items[resetItemIndex].respawnIn,
+        );
+      }
+
+      // Tell client to update their inventory
+      Socket.emit('core:refresh:inventory', {
+        player: { socket_id: world.players[playerIndex].socket_id },
+        data: world.players[playerIndex].inventory.slots,
+      });
     }
-
-    // Tell client to update their inventory
-    Socket.emit('core:refresh:inventory', {
-      player: { socket_id: world.players[playerIndex].socket_id },
-      data: world.players[playerIndex].inventory,
-    });
   },
 
   /**
@@ -250,7 +256,7 @@ export default {
       /** UPDATE PLAYER DATA */
       if (Shop.successfulSale(response)) {
         world.shops[shop.shopIndex].inventory = response.shopItems;
-        world.players[shop.playerIndex].inventory = response.inventory;
+        world.players[shop.playerIndex].inventory.slots = response.inventory;
 
         // Refresh client with new data
         Socket.emit('core:refresh:inventory', {
@@ -283,7 +289,7 @@ export default {
   /**
    * A player withdraws or deposits items from their bank or inventory
    */
-  'player:screen:bank:action': (data) => {
+  'player:screen:bank:action': async (data) => {
     const bank = new Bank(
       data.id,
       data.item.id,
@@ -292,11 +298,12 @@ export default {
     );
 
     try {
-      const { inventory, bankItems } = bank[data.doing]();
+      const { inventory, bankItems } = await bank[data.doing]();
 
       /** UPDATE PLAYER DATA */
       world.players[bank.playerIndex].bank = bankItems;
-      world.players[bank.playerIndex].inventory = inventory;
+      world.players[bank.playerIndex].inventory.slots = inventory;
+
 
       // Refresh client with new data
       Socket.emit('core:refresh:inventory', {
@@ -360,4 +367,3 @@ export default {
     }
   },
 };
-
